@@ -1,0 +1,348 @@
+"""
+CarbonSense AI - Optimization Engine
+Real-time fuel efficiency and carbon emission optimization algorithms
+"""
+
+import pandas as pd
+import numpy as np
+from sklearn.ensemble import RandomForestRegressor
+from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import StandardScaler
+import joblib
+from scipy.optimize import minimize
+import json
+from datetime import datetime
+
+class CarbonOptimizer:
+    def __init__(self):
+        self.fuel_predictor = None
+        self.emission_predictor = None
+        self.scaler = StandardScaler()
+        self.co2_per_gallon = 22.4  # EPA standard
+        self.diesel_cost_per_gallon = 3.85
+        
+        # Optimization constraints based on equipment capabilities
+        self.optimization_constraints = {
+            'speed_min': 3.0,    # mph
+            'speed_max': 15.0,   # mph
+            'load_min': 40.0,    # %
+            'load_max': 95.0,    # %
+            'efficiency_threshold': 0.15  # 15% minimum improvement
+        }
+
+    def prepare_features(self, data):
+        """Prepare features for ML models"""
+        features = [
+            'speed_mph', 'engine_load_pct', 'implement_width_ft',
+            'field_acres', 'weather_factor'
+        ]
+        
+        # Add encoded categorical features
+        feature_data = data[features].copy()
+        
+        # Encode operation types
+        operation_dummies = pd.get_dummies(data['operation_type'], prefix='operation')
+        feature_data = pd.concat([feature_data, operation_dummies], axis=1)
+        
+        # Encode soil types
+        soil_dummies = pd.get_dummies(data['soil_type'], prefix='soil')
+        feature_data = pd.concat([feature_data, soil_dummies], axis=1)
+        
+        # Encode terrain types
+        terrain_dummies = pd.get_dummies(data['terrain_type'], prefix='terrain')
+        feature_data = pd.concat([feature_data, terrain_dummies], axis=1)
+        
+        return feature_data
+
+    def train_optimization_models(self, training_data):
+        """Train ML models for fuel consumption and emission prediction"""
+        print("🤖 Training AI optimization models...")
+        
+        # Prepare features and targets
+        X = self.prepare_features(training_data)
+        y_fuel = training_data['fuel_rate_gph']
+        y_co2 = training_data['co2_rate_lbs_per_hour']
+        
+        # Handle any missing columns by filling with zeros
+        self.feature_columns = X.columns.tolist()
+        
+        # Scale features
+        X_scaled = self.scaler.fit_transform(X)
+        
+        # Split data once for both models
+        X_train, X_test, y_fuel_train, y_fuel_test = train_test_split(
+            X_scaled, y_fuel, test_size=0.2, random_state=42
+        )
+        _, _, y_co2_train, y_co2_test = train_test_split(
+            X_scaled, y_co2, test_size=0.2, random_state=42
+        )
+        
+        # Train fuel consumption model
+        self.fuel_predictor = RandomForestRegressor(
+            n_estimators=100, random_state=42, n_jobs=-1
+        )
+        self.fuel_predictor.fit(X_train, y_fuel_train)
+        
+        # Train CO2 emission model (could be derived, but ML captures complex relationships)
+        self.emission_predictor = RandomForestRegressor(
+            n_estimators=100, random_state=42, n_jobs=-1
+        )
+        self.emission_predictor.fit(X_train, y_co2_train)
+        
+        # Evaluate models
+        fuel_score = self.fuel_predictor.score(X_test, y_fuel_test)
+        co2_score = self.emission_predictor.score(X_test, y_co2_test)
+        
+        print(f"✅ Fuel consumption model R² score: {fuel_score:.3f}")
+        print(f"✅ CO2 emission model R² score: {co2_score:.3f}")
+        
+        return fuel_score, co2_score
+
+    def predict_consumption(self, operation_params):
+        """Predict fuel consumption and emissions for given parameters"""
+        if self.fuel_predictor is None or self.emission_predictor is None:
+            raise ValueError("Models not trained. Call train_optimization_models first.")
+        
+        # Create feature vector
+        feature_row = pd.DataFrame([operation_params])
+        X = self.prepare_features(feature_row)
+        
+        # Ensure all required columns are present
+        for col in self.feature_columns:
+            if col not in X.columns:
+                X[col] = 0
+        
+        # Reorder columns to match training data
+        X = X.reindex(columns=self.feature_columns, fill_value=0)
+        
+        # Scale features
+        X_scaled = self.scaler.transform(X)
+        
+        # Predict
+        fuel_rate = self.fuel_predictor.predict(X_scaled)[0]
+        co2_rate = self.emission_predictor.predict(X_scaled)[0]
+        
+        return fuel_rate, co2_rate
+
+    def optimize_speed_for_operation(self, base_params, target_acres_per_hour=None):
+        """Find optimal speed for minimum fuel consumption"""
+        
+        def objective_function(speed):
+            params = base_params.copy()
+            params['speed_mph'] = speed[0]
+            
+            try:
+                fuel_rate, _ = self.predict_consumption(params)
+                return fuel_rate
+            except:
+                return 999  # High penalty for invalid parameters
+        
+        # Speed optimization constraints
+        constraints = []
+        if target_acres_per_hour:
+            # Constraint to meet productivity target
+            def productivity_constraint(speed):
+                acres_per_hour = (speed[0] * base_params['implement_width_ft']) / 43560 * 8.25
+                return acres_per_hour - target_acres_per_hour
+            
+            constraints.append({'type': 'ineq', 'fun': productivity_constraint})
+        
+        # Optimize
+        result = minimize(
+            objective_function,
+            x0=[base_params['speed_mph']],
+            method='SLSQP',
+            bounds=[(self.optimization_constraints['speed_min'], 
+                    self.optimization_constraints['speed_max'])],
+            constraints=constraints
+        )
+        
+        if result.success:
+            optimal_speed = result.x[0]
+            optimal_fuel, optimal_co2 = self.predict_consumption({
+                **base_params, 'speed_mph': optimal_speed
+            })
+            
+            # Calculate savings
+            original_fuel, original_co2 = self.predict_consumption(base_params)
+            fuel_savings_pct = (original_fuel - optimal_fuel) / original_fuel * 100
+            co2_reduction_pct = (original_co2 - optimal_co2) / original_co2 * 100
+            
+            return {
+                'optimal_speed': round(optimal_speed, 1),
+                'fuel_savings_percent': round(fuel_savings_pct, 1),
+                'co2_reduction_percent': round(co2_reduction_pct, 1),
+                'optimal_fuel_rate': round(optimal_fuel, 2),
+                'optimal_co2_rate': round(optimal_co2, 2),
+                'cost_savings_per_hour': round((original_fuel - optimal_fuel) * self.diesel_cost_per_gallon, 2)
+            }
+        else:
+            return None
+
+    def generate_route_optimization(self, field_boundary, implement_width, current_pattern='parallel'):
+        """Generate optimized field operation route"""
+        
+        # Calculate field dimensions
+        lats = [p[0] for p in field_boundary]
+        lons = [p[1] for p in field_boundary]
+        field_length = max(lats) - min(lats)
+        field_width = max(lons) - min(lons)
+        
+        # Convert implement width to coordinate system
+        width_deg = (implement_width / 5280) / (69.0 * np.cos(np.radians(np.mean(lats))))
+        
+        # Calculate optimization potential
+        patterns = {
+            'parallel': {'efficiency': 0.95, 'fuel_factor': 1.0},
+            'contour': {'efficiency': 0.88, 'fuel_factor': 1.15},
+            'spiral': {'efficiency': 0.92, 'fuel_factor': 1.08},
+            'optimized_parallel': {'efficiency': 0.98, 'fuel_factor': 0.85}
+        }
+        
+        current_efficiency = patterns[current_pattern]['efficiency']
+        optimal_efficiency = patterns['optimized_parallel']['efficiency']
+        
+        # Calculate savings from route optimization
+        efficiency_improvement = (optimal_efficiency - current_efficiency) / current_efficiency
+        fuel_savings_pct = efficiency_improvement * 100
+        
+        # Estimate overlap reduction
+        overlap_reduction = 0.05  # 5% reduction in overlap
+        total_fuel_savings = fuel_savings_pct + (overlap_reduction * 100)
+        
+        return {
+            'recommended_pattern': 'Optimized Parallel with Reduced Overlap',
+            'fuel_savings_percent': round(total_fuel_savings, 1),
+            'overlap_reduction_percent': round(overlap_reduction * 100, 1),
+            'efficiency_improvement': round(efficiency_improvement * 100, 1),
+            'estimated_time_savings': round(efficiency_improvement * 60, 0),  # minutes
+            'pattern_description': 'AI-optimized parallel passes with minimal overlap and reduced turn time'
+        }
+
+    def real_time_recommendations(self, current_telemetry):
+        """Generate real-time optimization recommendations"""
+        recommendations = []
+        
+        # Speed optimization
+        speed_opt = self.optimize_speed_for_operation(current_telemetry)
+        if speed_opt and speed_opt['fuel_savings_percent'] > 5:
+            recommendations.append({
+                'type': 'speed_optimization',
+                'priority': 'high',
+                'title': f"Adjust Speed to {speed_opt['optimal_speed']} mph",
+                'description': f"Reduce fuel consumption by {speed_opt['fuel_savings_percent']:.1f}%",
+                'savings': f"${speed_opt['cost_savings_per_hour']:.2f}/hour",
+                'co2_reduction': f"{speed_opt['co2_reduction_percent']:.1f}% less CO2",
+                'action': 'speed_adjustment',
+                'target_value': speed_opt['optimal_speed']
+            })
+        
+        # Engine load optimization
+        current_load = current_telemetry.get('engine_load_pct', 70)
+        if current_load > 85:
+            recommendations.append({
+                'type': 'load_optimization',
+                'priority': 'medium',
+                'title': 'Reduce Engine Load',
+                'description': 'Current load is high, consider reducing depth or speed',
+                'savings': 'Up to 12% fuel savings',
+                'action': 'load_reduction',
+                'target_value': 75
+            })
+        
+        # Weather-based recommendations
+        weather_factor = current_telemetry.get('weather_factor', 1.0)
+        if weather_factor > 1.1:
+            recommendations.append({
+                'type': 'weather_optimization',
+                'priority': 'low',
+                'title': 'Weather Impact Detected',
+                'description': 'Consider adjusting operation timing due to weather conditions',
+                'savings': 'Up to 8% efficiency improvement',
+                'action': 'timing_adjustment'
+            })
+        
+        return recommendations
+
+    def save_models(self, path_prefix="carbonsense_models"):
+        """Save trained models for deployment"""
+        if self.fuel_predictor:
+            joblib.dump(self.fuel_predictor, f"{path_prefix}_fuel_model.pkl")
+            joblib.dump(self.emission_predictor, f"{path_prefix}_emission_model.pkl")
+            joblib.dump(self.scaler, f"{path_prefix}_scaler.pkl")
+            
+            # Save feature columns
+            with open(f"{path_prefix}_features.json", 'w') as f:
+                json.dump(self.feature_columns, f)
+            
+            print("✅ Models saved successfully")
+
+    def load_models(self, path_prefix="carbonsense_models"):
+        """Load pre-trained models"""
+        try:
+            self.fuel_predictor = joblib.load(f"{path_prefix}_fuel_model.pkl")
+            self.emission_predictor = joblib.load(f"{path_prefix}_emission_model.pkl")
+            self.scaler = joblib.load(f"{path_prefix}_scaler.pkl")
+            
+            with open(f"{path_prefix}_features.json", 'r') as f:
+                self.feature_columns = json.load(f)
+            
+            print("✅ Models loaded successfully")
+            return True
+        except Exception as e:
+            print(f"❌ Error loading models: {e}")
+            return False
+
+# Demo usage
+if __name__ == "__main__":
+    print("🧠 CarbonSense AI Optimization Engine Demo")
+    
+    # Initialize optimizer
+    optimizer = CarbonOptimizer()
+    
+    # Load demo data (generated from demo_data_generator.py)
+    try:
+        demo_data = pd.read_csv("../data/demo_all_operations.csv")
+        print(f"📊 Loaded {len(demo_data)} training records")
+        
+        # Train models
+        fuel_score, co2_score = optimizer.train_optimization_models(demo_data)
+        
+        # Demo optimization for current operation
+        current_operation = {
+            'speed_mph': 7.5,
+            'engine_load_pct': 78,
+            'implement_width_ft': 24,
+            'field_acres': 160,
+            'weather_factor': 1.1,
+            'operation_type': 'planter',
+            'soil_type': 'loam',
+            'terrain_type': 'rolling'
+        }
+        
+        print(f"\n🚜 Current Operation Analysis:")
+        print(f"Speed: {current_operation['speed_mph']} mph")
+        print(f"Engine Load: {current_operation['engine_load_pct']}%")
+        
+        # Get optimization recommendations
+        speed_opt = optimizer.optimize_speed_for_operation(current_operation)
+        if speed_opt:
+            print(f"\n⚡ Speed Optimization Results:")
+            print(f"Optimal Speed: {speed_opt['optimal_speed']} mph")
+            print(f"Fuel Savings: {speed_opt['fuel_savings_percent']}%")
+            print(f"CO2 Reduction: {speed_opt['co2_reduction_percent']}%")
+            print(f"Cost Savings: ${speed_opt['cost_savings_per_hour']:.2f}/hour")
+        
+        # Generate real-time recommendations
+        recommendations = optimizer.real_time_recommendations(current_operation)
+        if recommendations:
+            print(f"\n💡 Real-time Recommendations:")
+            for rec in recommendations:
+                print(f"- {rec['title']}: {rec['description']}")
+        
+        # Save models for web application
+        optimizer.save_models("carbonsense")
+        
+    except FileNotFoundError:
+        print("❌ Demo data not found. Run demo_data_generator.py first.")
+        print("   This will generate the required training data.")

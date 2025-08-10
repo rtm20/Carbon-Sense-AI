@@ -1,0 +1,1240 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CarbonSense AI - Smart Field Operation Carbon Optimizer</title>
+    
+    <!-- CSS Libraries -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css">
+    
+    <!-- Custom Styles -->
+    <style>
+        :root {
+            --primary-color: #367c2b;  /* John Deere Green */
+            --secondary-color: #ffde00; /* John Deere Yellow */
+            --success-color: #28a745;
+            --warning-color: #ffc107;
+            --danger-color: #dc3545;
+            --dark-color: #212529;
+            --light-color: #f8f9fa;
+            --card-shadow: 0 8px 30px rgba(0,0,0,0.08);
+            --hover-shadow: 0 10px 40px rgba(0,0,0,0.15);
+            --card-border-radius: 16px;
+            --primary-gradient: linear-gradient(135deg, #367c2b, #2d5e23);
+            --section-spacing: 2rem;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f5f7fa;
+            color: var(--dark-color);
+        }
+
+        .navbar {
+            background: var(--primary-gradient);
+            box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+            padding: 0.8rem 0;
+        }
+
+        .navbar-brand {
+            font-weight: bold;
+            font-size: 1.6rem;
+            color: white !important;
+            letter-spacing: 0.5px;
+            display: flex;
+            align-items: center;
+        }
+
+        .navbar-brand i {
+            font-size: 1.8rem;
+            margin-right: 0.6rem;
+            filter: drop-shadow(0 2px 3px rgba(0,0,0,0.2));
+        }
+
+        .card {
+            border: none;
+            box-shadow: var(--card-shadow);
+            border-radius: var(--card-border-radius);
+            transition: all 0.3s ease;
+            background-color: white;
+            overflow: hidden;
+        }
+
+        .card:hover {
+            transform: translateY(-4px);
+            box-shadow: var(--hover-shadow);
+        }
+        
+        /* Notification styles */
+        .notification {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            display: flex;
+            align-items: center;
+            background: white;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            border-radius: 8px;
+            padding: 12px 16px;
+            z-index: 1000;
+            opacity: 0;
+            transform: translateY(-20px);
+            transition: all 0.3s ease;
+            max-width: 350px;
+        }
+        
+        .notification.show {
+            opacity: 1;
+            transform: translateY(0);
+        }
+        
+        .notification-icon {
+            margin-right: 12px;
+            font-size: 20px;
+        }
+        
+        .notification-success .notification-icon {
+            color: var(--success-color);
+        }
+        
+        .notification-info .notification-icon {
+            color: #0dcaf0;
+        }
+        
+        .notification-warning .notification-icon {
+            color: var(--warning-color);
+        }
+
+        .card-header {
+            background: rgba(54, 124, 43, 0.05);
+            border-bottom: 1px solid rgba(54, 124, 43, 0.1);
+            padding: 1.2rem 1.5rem;
+            font-weight: 600;
+            letter-spacing: 0.5px;
+        }
+
+        .card-header h5 {
+            margin: 0;
+            font-size: 1.25rem;
+            color: #2d5e23;
+            display: flex;
+            align-items: center;
+        }
+
+        .card-header h5 i {
+            margin-right: 0.6rem;
+            color: var(--primary-color);
+        }
+
+        .card-body {
+            padding: 1.5rem;
+        }
+
+        .metric-card {
+            text-align: center;
+            padding: 1.8rem;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .metric-value {
+            font-size: 3rem;
+            font-weight: bold;
+            margin-bottom: 0.6rem;
+            line-height: 1;
+        }
+
+        .metric-label {
+            color: #6c757d;
+            font-size: 1rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            font-weight: 500;
+        }
+
+        .status-indicator {
+            width: 14px;
+            height: 14px;
+            border-radius: 50%;
+            display: inline-block;
+            margin-right: 8px;
+            box-shadow: 0 0 8px rgba(0,0,0,0.1);
+        }
+
+        .status-online { 
+            background-color: var(--success-color);
+            box-shadow: 0 0 8px rgba(40, 167, 69, 0.5);
+        }
+        .status-warning { 
+            background-color: var(--warning-color);
+            box-shadow: 0 0 8px rgba(255, 193, 7, 0.5);
+        }
+        .status-offline { 
+            background-color: var(--danger-color);
+            box-shadow: 0 0 8px rgba(220, 53, 69, 0.5);
+        }
+
+        .recommendation-card {
+            border-left: 5px solid var(--primary-color);
+            margin-bottom: 1.5rem;
+            background-color: white;
+            transition: all 0.2s ease;
+        }
+
+        .recommendation-card .card-body {
+            padding: 1.25rem;
+        }
+
+        .priority-high { 
+            border-left-color: var(--danger-color) !important;
+        }
+        .priority-medium { 
+            border-left-color: var(--warning-color) !important; 
+        }
+        .priority-low { 
+            border-left-color: var(--success-color) !important; 
+        }
+
+        .recommendation-card:hover {
+            transform: translateX(4px);
+            box-shadow: 0 6px 15px rgba(0,0,0,0.08);
+        }
+
+        #map {
+            height: 420px;
+            border-radius: calc(var(--card-border-radius) - 8px);
+            border: 1px solid rgba(0,0,0,0.05);
+        }
+
+        .gauge-container {
+            position: relative;
+            width: 200px;
+            height: 200px;
+            margin: 0 auto;
+        }
+
+        .real-time-badge {
+            position: absolute;
+            top: 12px;
+            right: 12px;
+            background: var(--success-color);
+            color: white;
+            padding: 5px 10px;
+            border-radius: 12px;
+            font-size: 0.8rem;
+            font-weight: 500;
+            letter-spacing: 0.5px;
+            animation: pulse 2s infinite;
+            box-shadow: 0 2px 8px rgba(40, 167, 69, 0.4);
+            display: flex;
+            align-items: center;
+        }
+
+        .real-time-badge::before {
+            content: '';
+            display: inline-block;
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background-color: white;
+            margin-right: 6px;
+        }
+
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.7; }
+            100% { opacity: 1; }
+        }
+
+        .optimization-summary {
+            background: linear-gradient(135deg, #eaf5ea, #d5e9d5);
+            padding: 1.8rem;
+            border-radius: var(--card-border-radius);
+            margin-bottom: var(--section-spacing);
+            box-shadow: 0 6px 20px rgba(0,0,0,0.05);
+            border: 1px solid rgba(54, 124, 43, 0.1);
+        }
+
+        .optimization-summary h4 {
+            color: #2d5e23;
+            margin-bottom: 0.8rem;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+        }
+
+        .optimization-summary h4 i {
+            margin-right: 0.6rem;
+            color: var(--primary-color);
+            filter: drop-shadow(0 2px 3px rgba(0,0,0,0.1));
+        }
+
+        .savings-highlight {
+            font-size: 2.2rem;
+            font-weight: bold;
+            color: var(--success-color);
+            text-shadow: 0 1px 2px rgba(0,0,0,0.05);
+            line-height: 1.1;
+        }
+
+        .section-heading {
+            font-size: 1.8rem;
+            font-weight: 600;
+            margin-bottom: 1.5rem;
+            color: #2d5e23;
+        }
+
+        .row {
+            margin-bottom: var(--section-spacing);
+        }
+
+        .progress {
+            height: 25px;
+            border-radius: 12px;
+            background-color: rgba(0,0,0,0.05);
+            box-shadow: inset 0 1px 3px rgba(0,0,0,0.1);
+            overflow: hidden;
+            margin: 0.6rem 0;
+        }
+
+        .progress-bar {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 600;
+            transition: width 0.5s ease;
+        }
+
+        .small {
+            font-size: 0.9rem;
+        }
+
+        /* Improved badges */
+        .badge {
+            padding: 0.5em 0.7em;
+            font-weight: 500;
+            border-radius: 6px;
+        }
+
+        /* Improved metrics display */
+        .text-primary { color: #2d6a23 !important; }
+        .text-danger { color: #c82333 !important; }
+        .text-warning { color: #e0a800 !important; }
+        .text-info { color: #138496 !important; }
+        .text-success { color: #218838 !important; }
+
+        /* Additional subtle animations */
+        @keyframes fade-in {
+            0% { opacity: 0; transform: translateY(10px); }
+            100% { opacity: 1; transform: translateY(0); }
+        }
+
+        .fade-in {
+            animation: fade-in 0.5s ease forwards;
+        }
+
+        /* Container spacing */
+        .container {
+            padding-bottom: 2rem;
+        }
+
+        /* Improved form elements */
+        .form-label {
+            font-weight: 500;
+            margin-bottom: 0.5rem;
+            color: #495057;
+        }
+
+        /* Light backgrounds for contrast */
+        .bg-light-subtle {
+            background-color: rgba(248, 249, 250, 0.7);
+            border-radius: 8px;
+            padding: 1rem;
+        }
+
+        /* Typography improvements */
+        .text-muted {
+            color: #6c757d !important;
+            font-weight: 400;
+        }
+
+        h1, h2, h3, h4, h5, h6 {
+            color: #2d5e23;
+        }
+    </style>
+</head>
+<body>
+    <!-- Navigation -->
+    <nav class="navbar navbar-expand-lg">
+        <div class="container">
+            <a class="navbar-brand" href="#">
+                <i class="fas fa-leaf me-2"></i>
+                CarbonSense AI
+            </a>
+            <div class="navbar-nav ms-auto">
+                <span class="navbar-text text-white">
+                    <span class="status-indicator status-online"></span>
+                    Live Demo Mode
+                </span>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Dashboard -->
+    <div class="container mt-4">
+        
+        <!-- Header -->
+        <div class="row mb-4">
+            <div class="col-12">
+                <h2>Real-time Carbon Tracking & Optimization</h2>
+                <p class="text-muted">AI-powered fuel efficiency recommendations for John Deere 8370R</p>
+            </div>
+        </div>
+
+        <!-- Key Metrics Row -->
+        <div class="row mb-4">
+            <div class="col-md-3">
+                <div class="card metric-card">
+                    <div class="d-flex justify-content-center mb-2">
+                        <i class="fas fa-gas-pump text-primary fa-2x mb-2"></i>
+                    </div>
+                    <div class="metric-value text-primary" id="current-fuel">15.2</div>
+                    <div class="metric-label">Fuel Rate (GPH)</div>
+                    <div class="mt-3 badge bg-success d-flex align-items-center justify-content-center" style="width: fit-content; margin: 0 auto;" id="fuel-savings">
+                        <i class="fas fa-arrow-down me-1"></i> 18% reduction possible
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card metric-card">
+                    <div class="d-flex justify-content-center mb-2">
+                        <i class="fas fa-cloud text-danger fa-2x mb-2"></i>
+                    </div>
+                    <div class="metric-value text-danger" id="current-co2">340</div>
+                    <div class="metric-label">CO₂ Rate (lbs/hr)</div>
+                    <div class="mt-3 badge bg-success d-flex align-items-center justify-content-center" style="width: fit-content; margin: 0 auto;" id="co2-savings">
+                        <i class="fas fa-leaf me-1"></i> 61 lbs/hr savable
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card metric-card">
+                    <div class="d-flex justify-content-center mb-2">
+                        <i class="fas fa-gas-pump text-warning fa-2x mb-2"></i>
+                    </div>
+                    <div class="metric-value text-warning" id="current-cost">$58.52</div>
+                    <div class="metric-label">Fuel Cost/Hour</div>
+                    <div class="mt-3 badge bg-success d-flex align-items-center justify-content-center" style="width: fit-content; margin: 0 auto;" id="cost-savings">
+                        <i class="fas fa-dollar-sign me-1"></i> $10.50/hr savings
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card metric-card">
+                    <div class="d-flex justify-content-center mb-2">
+                        <i class="fas fa-tachometer-alt text-info fa-2x mb-2"></i>
+                    </div>
+                    <div class="metric-value text-info" id="current-speed">7.5</div>
+                    <div class="metric-label">Current Speed (MPH)</div>
+                    <div class="mt-3 badge bg-warning d-flex align-items-center justify-content-center" style="width: fit-content; margin: 0 auto;" id="speed-optimization">
+                        <i class="fas fa-exclamation-triangle me-1"></i> Optimize to 6.2 mph
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Optimization Summary -->
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="optimization-summary">
+                    <div class="row align-items-center">
+                        <div class="col-md-8">
+                            <h4><i class="fas fa-robot me-2"></i> AI Optimization Potential</h4>
+                            <p class="mb-2">Our AI analysis indicates significant efficiency improvements are possible with current field conditions.</p>
+                            <div class="d-flex align-items-center mt-3">
+                                <div class="me-4">
+                                    <div class="d-flex align-items-center">
+                                        <div class="me-2">
+                                            <i class="fas fa-leaf fa-lg text-success"></i>
+                                        </div>
+                                        <div>
+                                            <div class="fw-bold">18% CO₂ Reduction</div>
+                                            <small class="text-muted">Daily Carbon Impact</small>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div>
+                                    <div class="d-flex align-items-center">
+                                        <div class="me-2">
+                                            <i class="fas fa-tractor fa-lg text-primary"></i>
+                                        </div>
+                                        <div>
+                                            <div class="fw-bold">22% Fuel Economy</div>
+                                            <small class="text-muted">Efficiency Improvement</small>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-4 text-center">
+                            <div class="savings-highlight" id="daily-savings">$127/day</div>
+                            <small class="text-muted mb-2 d-block">Potential Daily Savings</small>
+                            <button class="btn btn-success btn-sm mt-2">
+                                <i class="fas fa-sync-alt me-1"></i> Apply Recommendations
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Main Content Row -->
+        <div class="row">
+            
+            <!-- Left Column - Real-time Data & Map -->
+            <div class="col-lg-8">
+                
+                <!-- Real-time Telemetry -->
+                <div class="card mb-4">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0">
+                            <i class="fas fa-tachometer-alt me-2"></i>
+                            Live Telemetry
+                        </h5>
+                        <div class="real-time-badge">LIVE</div>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-4">
+                                    <div class="d-flex justify-content-between align-items-center mb-2">
+                                        <label class="form-label mb-0 d-flex align-items-center">
+                                            <i class="fas fa-server text-info me-2"></i>
+                                            <strong>Engine Load</strong>
+                                        </label>
+                                        <span class="badge bg-info" id="engine-load-text">78%</span>
+                                    </div>
+                                    <div class="progress" style="height: 20px;">
+                                        <div class="progress-bar bg-info" id="engine-load-bar" role="progressbar" style="width: 78%"></div>
+                                    </div>
+                                </div>
+                                <div class="mb-4">
+                                    <div class="d-flex justify-content-between align-items-center mb-2">
+                                        <label class="form-label mb-0 d-flex align-items-center">
+                                            <i class="fas fa-water text-primary me-2"></i>
+                                            <strong>Hydraulic Pressure</strong>
+                                        </label>
+                                        <div class="d-flex align-items-center">
+                                            <span class="fw-bold" id="hydraulic-pressure">2,450</span>
+                                            <small class="text-muted ms-1">PSI</small>
+                                        </div>
+                                    </div>
+                                    <div class="progress" style="height: 10px;">
+                                        <div class="progress-bar bg-primary" role="progressbar" style="width: 65%"></div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-4">
+                                    <div class="d-flex justify-content-between align-items-center mb-2">
+                                        <label class="form-label mb-0 d-flex align-items-center">
+                                            <i class="fas fa-cog text-warning me-2 fa-spin-pulse"></i>
+                                            <strong>Engine RPM</strong>
+                                        </label>
+                                        <div class="d-flex align-items-center">
+                                            <span class="fw-bold" id="engine-rpm">1,850</span>
+                                            <small class="text-muted ms-1">RPM</small>
+                                        </div>
+                                    </div>
+                                    <div class="progress" style="height: 10px;">
+                                        <div class="progress-bar bg-warning" role="progressbar" style="width: 72%"></div>
+                                    </div>
+                                </div>
+                                <div class="mb-4">
+                                    <div class="d-flex justify-content-between align-items-center mb-2">
+                                        <label class="form-label mb-0 d-flex align-items-center">
+                                            <i class="fas fa-thermometer-half text-danger me-2"></i>
+                                            <strong>Coolant Temperature</strong>
+                                        </label>
+                                        <div class="d-flex align-items-center">
+                                            <span class="fw-bold" id="coolant-temp">195</span>
+                                            <small class="text-muted ms-1">°F</small>
+                                        </div>
+                                    </div>
+                                    <div class="progress" style="height: 10px;">
+                                        <div class="progress-bar bg-danger" role="progressbar" style="width: 68%"></div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Field Map -->
+                <div class="card mb-4">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0">
+                            <i class="fas fa-map-marked-alt me-2"></i>
+                            Field Operation Map
+                        </h5>
+                        <div class="d-flex align-items-center">
+                            <span class="badge bg-success me-2">
+                                <i class="fas fa-signal me-1"></i> GPS Active
+                            </span>
+                            <div class="dropdown">
+                                <button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button" id="mapOptionsDropdown" data-bs-toggle="dropdown" aria-expanded="false">
+                                    <i class="fas fa-layer-group"></i>
+                                </button>
+                                <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="mapOptionsDropdown">
+                                    <li><a class="dropdown-item" href="#"><i class="fas fa-check me-2"></i> Satellite View</a></li>
+                                    <li><a class="dropdown-item" href="#"><i class="fas fa-square me-2"></i> Terrain View</a></li>
+                                    <li><hr class="dropdown-divider"></li>
+                                    <li><a class="dropdown-item" href="#"><i class="fas fa-check me-2"></i> Show Boundary</a></li>
+                                    <li><a class="dropdown-item" href="#"><i class="fas fa-check me-2"></i> Show Path</a></li>
+                                    <li><a class="dropdown-item" href="#"><i class="fas fa-check me-2"></i> Show Suggestions</a></li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="card-body p-0">
+                        <div id="map"></div>
+                        <div class="bg-light p-3 border-top">
+                            <div class="d-flex justify-content-between">
+                                <div>
+                                    <div class="d-flex align-items-center">
+                                        <i class="fas fa-tractor text-success me-2"></i>
+                                        <div>
+                                            <div class="fw-bold">Current Path</div>
+                                            <small class="text-muted">Row 42 - North Pass</small>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div>
+                                    <div class="d-flex align-items-center">
+                                        <i class="fas fa-map-marker-alt text-danger me-2"></i>
+                                        <div>
+                                            <div class="fw-bold">GPS Precision</div>
+                                            <small class="text-success">RTK Fixed ±1cm</small>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div>
+                                    <div class="d-flex align-items-center">
+                                        <i class="fas fa-route text-primary me-2"></i>
+                                        <div>
+                                            <div class="fw-bold">Coverage</div>
+                                            <small>94.2 acres (58.9%)</small>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Performance Chart -->
+                <div class="card">
+                    <div class="card-header d-flex justify-content-between align-items-center py-2">
+                        <h5 class="mb-0 fs-6">
+                            <i class="fas fa-chart-line me-1"></i>
+                            Fuel Efficiency Trend
+                        </h5>
+                        <div class="btn-group btn-group-sm" role="group" style="font-size: 0.8rem;">
+                            <button type="button" class="btn btn-sm btn-outline-primary active py-0 px-2">Day</button>
+                            <button type="button" class="btn btn-sm btn-outline-primary py-0 px-2">Week</button>
+                            <button type="button" class="btn btn-sm btn-outline-primary py-0 px-2">Month</button>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <div class="mb-3 d-flex justify-content-between">
+                            <div>
+                                <span class="d-block fw-bold text-success">2.12 gal/acre</span>
+                                <small class="text-muted">Current Average</small>
+                            </div>
+                            <div>
+                                <span class="d-block fw-bold text-primary">2.45 gal/acre</span>
+                                <small class="text-muted">Baseline</small>
+                            </div>
+                            <div>
+                                <span class="d-block fw-bold text-success">13.5% ↓</span>
+                                <small class="text-muted">Improvement</small>
+                            </div>
+                        </div>
+                        <div style="height: 180px;">
+                            <canvas id="efficiency-chart"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right Column - Recommendations & Analytics -->
+            <div class="col-lg-4">
+                
+                <!-- AI Recommendations -->
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <h5 class="mb-0">
+                            <i class="fas fa-lightbulb me-2"></i>
+                            AI Recommendations
+                        </h5>
+                    </div>
+                    <div class="card-body" id="recommendations-container">
+                        <!-- Recommendations will be populated by JavaScript -->
+                    </div>
+                </div>
+
+                <!-- Current Operation Status -->
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <h5 class="mb-0">
+                            <i class="fas fa-cog me-2"></i>
+                            Operation Status
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <div class="d-flex align-items-center mb-3">
+                                    <div class="me-3">
+                                        <div class="rounded-circle bg-light d-flex align-items-center justify-content-center" style="width: 40px; height: 40px">
+                                            <i class="fas fa-tractor text-primary"></i>
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <div class="text-muted small">Operation</div>
+                                        <div class="fw-bold" id="operation-type">Spring Planting</div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="d-flex align-items-center mb-3">
+                                    <div class="me-3">
+                                        <div class="rounded-circle bg-light d-flex align-items-center justify-content-center" style="width: 40px; height: 40px">
+                                            <i class="fas fa-map-marker-alt text-danger"></i>
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <div class="text-muted small">Field</div>
+                                        <div class="fw-bold" id="field-info">Field A - 160 acres</div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="d-flex align-items-center mb-3">
+                                    <div class="me-3">
+                                        <div class="rounded-circle bg-light d-flex align-items-center justify-content-center" style="width: 40px; height: 40px">
+                                            <i class="fas fa-seedling text-success"></i>
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <div class="text-muted small">Soil Type</div>
+                                        <div class="fw-bold" id="soil-type">Loam</div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="d-flex align-items-center mb-3">
+                                    <div class="me-3">
+                                        <div class="rounded-circle bg-light d-flex align-items-center justify-content-center" style="width: 40px; height: 40px">
+                                            <i class="fas fa-mountain text-warning"></i>
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <div class="text-muted small">Terrain</div>
+                                        <div class="fw-bold" id="terrain-type">Rolling</div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="d-flex align-items-center mb-md-0 mb-3">
+                                    <div class="me-3">
+                                        <div class="rounded-circle bg-light d-flex align-items-center justify-content-center" style="width: 40px; height: 40px">
+                                            <i class="fas fa-tools text-info"></i>
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <div class="text-muted small">Implement</div>
+                                        <div class="fw-bold" id="implement-info">24-row Planter</div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="d-flex flex-column">
+                                    <div class="text-muted small mb-1">Progress</div>
+                                    <div class="progress" style="height: 25px;">
+                                        <div class="progress-bar bg-success" role="progressbar" style="width: 65%">65%</div>
+                                    </div>
+                                </div>
+                            </div>
+                    </div>
+                </div>
+
+                <!-- Daily Summary -->
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="mb-0">
+                            <i class="fas fa-calendar-day me-2"></i>
+                            Today's Summary
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row text-center">
+                            <div class="col-6">
+                                <div class="mb-3">
+                                    <div class="h4 text-primary" id="total-fuel">142.5</div>
+                                    <small class="text-muted">Gallons Used</small>
+                                </div>
+                            </div>
+                            <div class="col-6">
+                                <div class="mb-3">
+                                    <div class="h4 text-danger" id="total-co2">3,192</div>
+                                    <small class="text-muted">lbs CO₂</small>
+                                </div>
+                            </div>
+                            <div class="col-6">
+                                <div class="mb-3">
+                                    <div class="h4 text-warning" id="total-cost">$548.63</div>
+                                    <small class="text-muted">Fuel Cost</small>
+                                </div>
+                            </div>
+                            <div class="col-6">
+                                <div class="mb-3">
+                                    <div class="h4 text-success" id="acres-covered">104</div>
+                                    <small class="text-muted">Acres</small>
+                                </div>
+                            </div>
+                        </div>
+                        <hr>
+                        <div class="text-center">
+                            <div class="text-success h5">Potential Savings Today</div>
+                            <div class="h3 text-success">$127.45</div>
+                            <small class="text-muted">With AI optimization</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- JavaScript Libraries -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.socket.io/4.5.0/socket.io.min.js"></script>
+
+    <!-- Custom JavaScript -->
+    <script>
+        // Configuration
+        const API_BASE_URL = 'http://localhost:5000/api';
+        
+        // Initialize map
+        let map = L.map('map').setView([41.5868, -93.6250], 15);
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '© OpenStreetMap contributors'
+        }).addTo(map);
+        
+        // Add field boundary (demo)
+        let fieldBoundary = [
+            [41.5900, -93.6280],
+            [41.5900, -93.6220],
+            [41.5840, -93.6220],
+            [41.5840, -93.6280]
+        ];
+        L.polygon(fieldBoundary, {color: 'green', fillOpacity: 0.2}).addTo(map);
+        
+        // Current position marker
+        let currentMarker = L.marker([41.5868, -93.6250]).addTo(map)
+            .bindPopup('John Deere 8370R - Current Position');
+        
+        // Initialize Chart.js
+        const ctx = document.getElementById('efficiency-chart').getContext('2d');
+        const efficiencyChart = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: ['6:00', '7:00', '8:00', '9:00', '10:00', '11:00', '12:00'],
+                datasets: [
+                    {
+                        label: 'Current Performance',
+                        data: [2.5, 2.3, 2.1, 2.0, 2.1, 2.0, 1.9],
+                        borderColor: '#367c2b',
+                        backgroundColor: 'rgba(54, 124, 43, 0.1)',
+                        borderWidth: 3,
+                        tension: 0.4,
+                        fill: true
+                    },
+                    {
+                        label: 'Baseline',
+                        data: [2.7, 2.6, 2.5, 2.4, 2.5, 2.4, 2.3],
+                        borderColor: '#6c757d',
+                        backgroundColor: 'transparent',
+                        borderWidth: 2,
+                        borderDash: [5, 5],
+                        tension: 0.4,
+                        fill: false
+                    },
+                    {
+                        label: 'Target Optimal',
+                        data: [2.0, 1.8, 1.8, 1.7, 1.8, 1.7, 1.7],
+                        borderColor: '#20c997',
+                        backgroundColor: 'transparent',
+                        borderWidth: 2,
+                        borderDash: [3, 3],
+                        tension: 0.4,
+                        fill: false
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: true,
+                aspectRatio: 2.5,
+                plugins: {
+                    legend: {
+                        display: true,
+                        position: 'top',
+                        labels: {
+                            usePointStyle: true,
+                            padding: 10,
+                            boxWidth: 8,
+                            font: {
+                                size: 11
+                            }
+                        }
+                    },
+                    tooltip: {
+                        mode: 'index',
+                        intersect: false,
+                        backgroundColor: 'rgba(255, 255, 255, 0.9)',
+                        titleColor: '#000',
+                        bodyColor: '#000',
+                        borderColor: '#ddd',
+                        borderWidth: 1,
+                        padding: 6,
+                        titleFont: {
+                            weight: 'bold',
+                            size: 10
+                        },
+                        bodyFont: {
+                            size: 10
+                        },
+                        displayColors: true,
+                        boxWidth: 8,
+                        boxHeight: 8,
+                        usePointStyle: true
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: false,
+                        min: 1.5,
+                        max: 3.0,
+                        ticks: {
+                            stepSize: 0.5,
+                            font: {
+                                size: 10
+                            },
+                            padding: 5
+                        },
+                        title: {
+                            display: false
+                        },
+                        grid: {
+                            color: 'rgba(0, 0, 0, 0.05)',
+                            drawBorder: false
+                        }
+                    },
+                    x: {
+                        ticks: {
+                            font: {
+                                size: 10
+                            }
+                        },
+                        grid: {
+                            display: false,
+                            drawBorder: false
+                        }
+                    }
+                }
+            }
+        });
+        
+        // Socket.IO connection for real-time data
+        const socket = io('http://localhost:5000');
+        
+        socket.on('connect', function() {
+            console.log('Connected to CarbonSense AI backend');
+            socket.emit('start_streaming');
+        });
+        
+        socket.on('telemetry_update', function(data) {
+            updateRealTimeData(data);
+            
+            // Update optimizations if available
+            if (data.optimizations) {
+                updateOptimizations(data.optimizations);
+            }
+        });
+        
+        // Update real-time data display
+        function updateRealTimeData(data) {
+            // Update metrics
+            document.getElementById('current-fuel').textContent = data.fuel_rate_gph?.toFixed(1) || '15.2';
+            document.getElementById('current-co2').textContent = Math.round(data.co2_rate_lbs_per_hour) || '340';
+            document.getElementById('current-cost').textContent = '$' + (data.fuel_cost_per_hour?.toFixed(2) || '58.52');
+            document.getElementById('current-speed').textContent = data.speed_mph?.toFixed(1) || '7.5';
+            
+            // Update telemetry
+            document.getElementById('engine-load-text').textContent = Math.round(data.engine_load_pct) + '%';
+            document.getElementById('engine-load-bar').style.width = Math.round(data.engine_load_pct) + '%';
+            document.getElementById('engine-rpm').textContent = Math.round(data.engine_rpm) || '1,850';
+            document.getElementById('hydraulic-pressure').textContent = (data.hydraulic_pressure_psi || '2,450').toLocaleString();
+            document.getElementById('coolant-temp').textContent = Math.round(data.coolant_temp_f) || '195';
+            
+            // Update map position
+            if (data.latitude && data.longitude) {
+                currentMarker.setLatLng([data.latitude, data.longitude]);
+            }
+        }
+        
+        // Update optimization data from AI models
+        function updateOptimizations(optimizations) {
+            // Update fuel rate optimization
+            const fuelSavingsElement = document.querySelector('#fuel-savings');
+            if (fuelSavingsElement && optimizations.fuel_reduction_pct) {
+                fuelSavingsElement.textContent = `${optimizations.fuel_reduction_pct}% reduction possible`;
+            }
+            
+            // Update CO2 savings
+            const co2SavingsElement = document.querySelector('#co2-savings');
+            if (co2SavingsElement && optimizations.co2_reduction_lbs_per_hr) {
+                co2SavingsElement.textContent = `${optimizations.co2_reduction_lbs_per_hr} lbs/hr savable`;
+            }
+            
+            // Update cost savings
+            const costSavingsElement = document.querySelector('#cost-savings');
+            if (costSavingsElement && optimizations.cost_savings_per_hr) {
+                costSavingsElement.textContent = `$${optimizations.cost_savings_per_hr.toFixed(2)}/hr savings`;
+            }
+            
+            // Update speed recommendation
+            const speedOptElement = document.querySelector('#speed-optimization');
+            if (speedOptElement && optimizations.optimal_speed_mph) {
+                speedOptElement.textContent = `Optimize to ${optimizations.optimal_speed_mph.toFixed(1)} mph`;
+            }
+            
+            // Update daily savings estimate
+            const dailySavingsElement = document.querySelector('#daily-savings');
+            if (dailySavingsElement && optimizations.daily_savings_usd) {
+                dailySavingsElement.textContent = `$${optimizations.daily_savings_usd.toFixed(2)}`;
+            }
+            
+            // Handle recommendations if any
+            if (optimizations.recommendations) {
+                updateDynamicRecommendations(optimizations.recommendations);
+            }
+        }
+        
+        // Update recommendations from AI models
+        function updateDynamicRecommendations(recommendations) {
+            const container = document.getElementById('recommendations-container');
+            if (!container) return;
+            
+            // Only update if we have new recommendations
+            if (recommendations.length > 0) {
+                container.innerHTML = '';
+                
+                recommendations.forEach(rec => {
+                    const card = document.createElement('div');
+                    card.className = `recommendation-card card mb-3 priority-${rec.priority} fade-in`;
+                    
+                    // Create icon based on recommendation type
+                    let iconClass = 'fa-lightbulb';
+                    if (rec.type === 'speed_optimization') iconClass = 'fa-tachometer-alt';
+                    if (rec.type === 'load_optimization') iconClass = 'fa-cog';
+                    if (rec.type === 'route_optimization') iconClass = 'fa-route';
+                    if (rec.type === 'weather_optimization') iconClass = 'fa-cloud';
+                    
+                    card.innerHTML = `
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between align-items-start mb-3">
+                                <div class="d-flex align-items-center">
+                                    <div class="me-3">
+                                        <div class="rounded-circle d-flex align-items-center justify-content-center" 
+                                            style="width: 40px; height: 40px; background-color: rgba(54, 124, 43, 0.1)">
+                                            <i class="fas ${iconClass} text-${rec.priority === 'high' ? 'danger' : rec.priority === 'medium' ? 'warning' : 'success'}"></i>
+                                        </div>
+                                    </div>
+                                    <h6 class="card-title mb-0 fw-bold">${rec.title}</h6>
+                                </div>
+                                <span class="badge bg-${rec.priority === 'high' ? 'danger' : rec.priority === 'medium' ? 'warning' : 'success'}">${rec.priority.toUpperCase()}</span>
+                            </div>
+                            <p class="card-text ms-5 ps-2">${rec.description}</p>
+                            <div class="d-flex justify-content-between align-items-center mt-3 ms-5 ps-2">
+                                <div class="d-flex align-items-center">
+                                    <div class="me-2">
+                                        <i class="fas fa-dollar-sign text-success"></i>
+                                    </div>
+                                    <div>
+                                        <small class="d-block"><strong>${rec.savings}</strong></small>
+                                    </div>
+                                </div>
+                                ${rec.co2_reduction ? `
+                                <div class="d-flex align-items-center">
+                                    <div class="me-2">
+                                        <i class="fas fa-leaf text-success"></i>
+                                    </div>
+                                    <div>
+                                        <small class="d-block"><strong>${rec.co2_reduction}</strong></small>
+                                    </div>
+                                </div>` : ''}
+                                <button class="btn btn-sm btn-outline-primary apply-recommendation" data-action="${rec.action}" data-target="${rec.target_value || ''}">Apply</button>
+                            </div>
+                        </div>
+                    `;
+                    container.appendChild(card);
+                });
+                
+                // Add event listeners for the apply buttons
+                document.querySelectorAll('.apply-recommendation').forEach(button => {
+                    button.addEventListener('click', function() {
+                        const action = this.getAttribute('data-action');
+                        const target = this.getAttribute('data-target');
+                        console.log(`Applying optimization: ${action} with target: ${target}`);
+                        
+                        // Show a success notification
+                        showNotification(`Applied optimization: ${action}`, 'success');
+                        
+                        // Here you would actually apply the optimization
+                        // For now we'll just show a notification
+                    });
+                });
+            }
+        }
+        
+        // Show a notification to the user
+        function showNotification(message, type = 'info') {
+            const notification = document.createElement('div');
+            notification.className = `notification notification-${type}`;
+            notification.innerHTML = `
+                <div class="notification-icon">
+                    <i class="fas fa-${type === 'success' ? 'check-circle' : type === 'warning' ? 'exclamation-triangle' : 'info-circle'}"></i>
+                </div>
+                <div class="notification-message">${message}</div>
+            `;
+            
+            document.body.appendChild(notification);
+            
+            setTimeout(() => {
+                notification.classList.add('show');
+            }, 10);
+            
+            setTimeout(() => {
+                notification.classList.remove('show');
+                setTimeout(() => {
+                    document.body.removeChild(notification);
+                }, 300);
+            }, 3000);
+        }
+        
+        // Load recommendations
+        function loadRecommendations() {
+            fetch(`${API_BASE_URL}/recommendations`)
+                .then(response => response.json())
+                .then(recommendations => {
+                    const container = document.getElementById('recommendations-container');
+                    container.innerHTML = '';
+                    
+                    recommendations.forEach(rec => {
+                        const card = document.createElement('div');
+                        card.className = `recommendation-card card mb-3 priority-${rec.priority} fade-in`;
+                        
+                        // Create icon based on recommendation type
+                        let iconClass = 'fa-lightbulb';
+                        if (rec.title.includes('Speed')) iconClass = 'fa-tachometer-alt';
+                        if (rec.title.includes('Engine') || rec.title.includes('RPM')) iconClass = 'fa-cog';
+                        if (rec.title.includes('Depth')) iconClass = 'fa-ruler-vertical';
+                        if (rec.title.includes('Route')) iconClass = 'fa-route';
+                        if (rec.title.includes('Overlap')) iconClass = 'fa-layer-group';
+                        
+                        card.innerHTML = `
+                            <div class="card-body">
+                                <div class="d-flex justify-content-between align-items-start mb-3">
+                                    <div class="d-flex align-items-center">
+                                        <div class="me-3">
+                                            <div class="rounded-circle d-flex align-items-center justify-content-center" 
+                                                style="width: 40px; height: 40px; background-color: rgba(54, 124, 43, 0.1)">
+                                                <i class="fas ${iconClass} text-${rec.priority === 'high' ? 'danger' : rec.priority === 'medium' ? 'warning' : 'success'}"></i>
+                                            </div>
+                                        </div>
+                                        <h6 class="card-title mb-0 fw-bold">${rec.title}</h6>
+                                    </div>
+                                    <span class="badge bg-${rec.priority === 'high' ? 'danger' : rec.priority === 'medium' ? 'warning' : 'success'}">${rec.priority.toUpperCase()}</span>
+                                </div>
+                                <p class="card-text ms-5 ps-2">${rec.description}</p>
+                                <div class="d-flex justify-content-between align-items-center mt-3 ms-5 ps-2">
+                                    <div class="d-flex align-items-center">
+                                        <div class="me-2">
+                                            <i class="fas fa-dollar-sign text-success"></i>
+                                        </div>
+                                        <div>
+                                            <small class="d-block"><strong>${rec.savings}</strong></small>
+                                        </div>
+                                    </div>
+                                    <div class="d-flex align-items-center me-3">
+                                        <div class="me-2">
+                                            <i class="fas fa-chart-line text-info"></i>
+                                        </div>
+                                        <div>
+                                            <small class="d-block"><strong>${rec.cost_impact}</strong></small>
+                                        </div>
+                                    </div>
+                                    ${rec.co2_impact ? `
+                                    <div class="d-flex align-items-center">
+                                        <div class="me-2">
+                                            <i class="fas fa-leaf text-success"></i>
+                                        </div>
+                                        <div>
+                                            <small class="d-block"><strong>${rec.co2_impact}</strong></small>
+                                        </div>
+                                    </div>` : ''}
+                                    <button class="btn btn-sm btn-outline-primary">Apply</button>
+                                </div>
+                            </div>
+                        `;
+                        container.appendChild(card);
+                    });
+                })
+                .catch(error => console.error('Error loading recommendations:', error));
+        }
+        
+        // Initialize dashboard
+        document.addEventListener('DOMContentLoaded', function() {
+            loadRecommendations();
+            
+            // Simulate some real-time updates for demo
+            setInterval(() => {
+                // Add slight variations to simulate real-time changes
+                const currentFuel = parseFloat(document.getElementById('current-fuel').textContent);
+                const variation = (Math.random() - 0.5) * 0.4;
+                document.getElementById('current-fuel').textContent = (currentFuel + variation).toFixed(1);
+            }, 3000);
+        });
+        
+        // Add some demo interactivity
+        document.addEventListener('click', function(e) {
+            if (e.target.closest('.recommendation-card')) {
+                const card = e.target.closest('.recommendation-card');
+                card.style.backgroundColor = '#e8f5e8';
+                setTimeout(() => {
+                    card.style.backgroundColor = '';
+                }, 2000);
+            }
+        });
+    </script>
+</body>
+</html>
