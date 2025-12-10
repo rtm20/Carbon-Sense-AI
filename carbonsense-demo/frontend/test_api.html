@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>API Test</title>
+</head>
+<body>
+    <h1>Soil Carbon API Test</h1>
+    <div id="results"></div>
+    
+    <script>
+        async function testAPIs() {
+            const results = document.getElementById('results');
+            
+            try {
+                // Test soil carbon prediction
+                console.log('Testing soil carbon prediction...');
+                const sampleSoilData = {
+                    soil_ph: 6.8,
+                    organic_matter_pct: 3.2,
+                    nitrogen_ppm: 45,
+                    phosphorus_ppm: 28,
+                    potassium_ppm: 195,
+                    moisture_pct: 22,
+                    temperature_c: 18
+                };
+                
+                const response1 = await fetch('/api/soil-carbon/predict', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(sampleSoilData)
+                });
+                
+                const data1 = await response1.json();
+                console.log('Soil carbon prediction response:', data1);
+                
+                // Test field analysis
+                console.log('Testing field analysis...');
+                const response2 = await fetch('/api/soil-carbon/field-analysis');
+                const data2 = await response2.json();
+                console.log('Field analysis response:', data2);
+                
+                // Test carbon footprint
+                console.log('Testing carbon footprint...');
+                const response3 = await fetch('/api/total-carbon-footprint');
+                const data3 = await response3.json();
+                console.log('Carbon footprint response:', data3);
+                
+                results.innerHTML = `
+                    <h2>API Test Results</h2>
+                    <h3>Soil Carbon Prediction</h3>
+                    <pre>${JSON.stringify(data1, null, 2)}</pre>
+                    <h3>Field Analysis</h3>
+                    <pre>${JSON.stringify(data2, null, 2)}</pre>
+                    <h3>Carbon Footprint</h3>
+                    <pre>${JSON.stringify(data3, null, 2)}</pre>
+                `;
+                
+            } catch (error) {
+                console.error('Error testing APIs:', error);
+                results.innerHTML = `<p style="color: red;">Error: ${error.message}</p>`;
+            }
+        }
+        
+        // Run test when page loads
+        window.addEventListener('load', testAPIs);
+    </script>
+</body>
+</html>

@@ -1,0 +1,801 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta         .navbar-brand img {
+            height: 40px;
+            width: auto;
+            margin-right: 10px;
+        }
+
+        .nav-link {
+            color: white !important;
+            text-decoration: none;
+            padding: 0.5rem 0.75rem;
+            border-radius: 0.25rem;
+            transition: background-color 0.15s ease-in-out;
+        }
+
+        .nav-link:hover {
+            background-color: rgba(255, 255, 255, 0.1);
+        }et="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CarbonSense AI - In-Cab View</title>
+    
+    <!-- Favicon -->
+    <link rel="icon" type="image/svg+xml" href="logo-icon.svg">
+    
+    <!-- CSS Libraries -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css">
+    
+    <!-- Custom Styles -->
+    <style>
+        :root {
+            --primary-color: #367c2b;  /* John Deere Green */
+            --secondary-color: #ffde00; /* John Deere Yellow */
+            --success-color: #28a745;
+            --warning-color: #ffc107;
+            --danger-color: #dc3545;
+            --dark-color: #212529;
+            --light-color: #f8f9fa;
+            --card-bg: rgba(30, 30, 30, 0.9);
+            --card-header-bg: rgba(54, 124, 43, 0.7);
+            --touch-target-min: 76px;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #000;
+            color: #fff;
+            padding-bottom: 100px; /* Space for the voice button */
+        }
+
+        .navbar {
+            background: linear-gradient(135deg, var(--primary-color), #2d5e23);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.4);
+            padding: 12px 0;
+            margin-bottom: 16px;
+        }
+
+        .navbar-brand {
+            font-weight: bold;
+            font-size: 2rem;
+            color: white !important;
+            text-shadow: 1px 1px 3px rgba(0,0,0,0.5);
+            display: flex;
+            align-items: center;
+        }
+
+        .navbar-brand img {
+            height: 45px;
+            width: auto;
+            margin-right: 12px;
+        }
+
+        .card {
+            border: none;
+            background-color: var(--card-bg);
+            color: #fff;
+            box-shadow: 0 6px 18px rgba(0,0,0,0.3);
+            border-radius: 20px;
+            margin-bottom: 24px;
+            overflow: hidden; /* Ensures content doesn't overflow rounded corners */
+        }
+
+        .card-header {
+            background-color: var(--card-header-bg);
+            border-bottom: none;
+            font-size: 1.6rem;
+            font-weight: bold;
+            padding: 16px 20px;
+            border-radius: 20px 20px 0 0 !important;
+            letter-spacing: 0.5px;
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.4);
+        }
+
+        .card-body {
+            padding: 20px;
+        }
+
+        .btn {
+            box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+            transition: all 0.2s ease-in-out;
+        }
+
+        .btn:active {
+            transform: translateY(2px);
+            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+        }
+
+        .btn-primary {
+            background-color: var(--primary-color);
+            border-color: var(--primary-color);
+            font-size: 1.4rem;
+            font-weight: bold;
+            padding: 14px 25px;
+            border-radius: 16px;
+        }
+
+        .btn-outline-light {
+            border-width: 3px;
+            font-size: 1.4rem;
+            padding: 14px 25px;
+            border-radius: 16px;
+            font-weight: bold;
+        }
+
+        .metric-large {
+            font-size: 4.5rem;
+            font-weight: bold;
+            margin-bottom: 0;
+            line-height: 1;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+            letter-spacing: -1px;
+        }
+        
+        .metric-label {
+            font-size: 1.4rem;
+            color: #bbb;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            font-weight: 500;
+            margin-top: 8px;
+        }
+
+        .status-indicator {
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            display: inline-block;
+            margin-right: 10px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.3);
+            border: 2px solid rgba(255,255,255,0.2);
+        }
+
+        .status-online { 
+            background-color: var(--success-color);
+            box-shadow: 0 0 10px var(--success-color);
+        }
+        
+        .status-warning { 
+            background-color: var(--warning-color);
+            box-shadow: 0 0 10px var(--warning-color);
+        }
+        
+        .status-offline { 
+            background-color: var(--danger-color);
+            box-shadow: 0 0 10px var(--danger-color);
+        }
+        
+        .status-connecting {
+            background-color: var(--warning-color);
+            box-shadow: 0 0 10px var(--warning-color);
+        }
+        
+        .status-demo {
+            background-color: #17a2b8;
+            box-shadow: 0 0 10px #17a2b8;
+        }
+
+        #map {
+            height: 320px;
+            border-radius: 16px;
+            margin-bottom: 0;
+            border: 2px solid rgba(255,255,255,0.1);
+        }
+
+        .recommendation-item {
+            background-color: rgba(60, 60, 60, 0.7);
+            border-left: 10px solid var(--warning-color);
+            padding: 20px;
+            margin-bottom: 20px;
+            border-radius: 16px;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.3);
+        }
+
+        .recommendation-item.priority-high {
+            border-left-color: var(--danger-color);
+        }
+
+        .recommendation-item.priority-medium {
+            border-left-color: var(--warning-color);
+        }
+
+        .recommendation-item.priority-low {
+            border-left-color: var(--success-color);
+        }
+
+        .recommendation-action {
+            font-size: 1.8rem;
+            font-weight: bold;
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.5);
+            letter-spacing: 0.5px;
+            margin-bottom: 8px;
+        }
+
+        .recommendation-benefit {
+            color: var(--success-color);
+            font-weight: bold;
+            font-size: 1.2rem;
+            letter-spacing: 0.5px;
+        }
+
+        /* Day/Night Mode Switch */
+        .day-night-toggle {
+            position: absolute;
+            top: 16px;
+            right: 16px;
+            z-index: 1000;
+        }
+
+        .day-night-toggle .btn {
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            padding: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .day-night-toggle .btn i {
+            font-size: 24px;
+        }
+
+        /* Large touch targets */
+        .touch-btn {
+            min-height: var(--touch-target-min);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 20px;
+            border-radius: 16px;
+            font-size: 1.4rem;
+            font-weight: bold;
+        }
+
+        /* Voice control button */
+        .voice-btn {
+            position: fixed;
+            bottom: 24px;
+            right: 24px;
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            background-color: var(--primary-color);
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 28px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.4);
+            z-index: 1000;
+            border: 2px solid rgba(255,255,255,0.2);
+            transition: all 0.2s ease;
+        }
+
+        .voice-btn:hover {
+            transform: scale(1.05);
+            box-shadow: 0 6px 20px rgba(0,0,0,0.5);
+        }
+
+        .voice-btn:active {
+            transform: scale(0.95);
+        }
+
+        /* Alert flash animation */
+        @keyframes alert-flash {
+            0%, 100% { opacity: 1; background-color: rgba(220, 53, 69, 0.8); }
+            50% { opacity: 0.7; background-color: rgba(220, 53, 69, 0.4); }
+        }
+
+        .alert-flashing {
+            animation: alert-flash 1.5s infinite;
+            border: 2px solid var(--danger-color);
+        }
+
+        /* High-contrast elements for sunlight visibility */
+        .high-contrast {
+            background-color: rgba(0, 0, 0, 0.9);
+            color: white;
+            padding: 16px;
+            border-radius: 16px;
+            border: 1px solid rgba(255,255,255,0.2);
+            box-shadow: inset 0 0 10px rgba(0,0,0,0.5);
+            text-align: center;
+        }
+
+        /* Progress bars */
+        .progress {
+            height: 36px;
+            border-radius: 18px;
+            background-color: rgba(0,0,0,0.3);
+            box-shadow: inset 0 0 10px rgba(0,0,0,0.3);
+            overflow: hidden;
+            margin: 10px 0;
+        }
+
+        .progress-bar {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.2rem;
+            font-weight: bold;
+            transition: width 0.5s ease;
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.4);
+        }
+
+        /* Speed indicator styling */
+        .text-danger {
+            text-shadow: 0 0 10px rgba(220, 53, 69, 0.5);
+        }
+
+        .text-warning {
+            text-shadow: 0 0 10px rgba(255, 193, 7, 0.5);
+        }
+
+        .text-success {
+            text-shadow: 0 0 10px rgba(40, 167, 69, 0.5);
+        }
+
+        .text-primary {
+            text-shadow: 0 0 10px rgba(54, 124, 43, 0.5);
+        }
+    </style>
+</head>
+<body>
+    <!-- Navigation -->
+    <nav class="navbar">
+        <div class="container">
+            <a class="navbar-brand" href="index.html">
+                <img src="logo.svg" alt="CarbonSense AI Logo">
+                CarbonSense AI
+            </a>
+            <div class="d-flex align-items-center">
+                <a class="nav-link text-white me-3" href="index.html">
+                    <i class="fas fa-home me-1"></i> Dashboard
+                </a>
+                <a class="nav-link text-white me-3 fw-bold" href="#">
+                    <i class="fas fa-tractor me-1"></i> In-Cab View
+                </a>
+                <a class="nav-link text-white me-3" href="model_performance.html">
+                    <i class="fas fa-chart-line me-1"></i> Model Performance
+                </a>
+                <span class="d-flex align-items-center">
+                    <span class="status-indicator status-online" id="api-status"></span>
+                    <span class="d-none d-md-inline" id="api-status-text">CONNECTING...</span>
+                </span>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Day/Night Mode Toggle -->
+    <div class="day-night-toggle">
+        <button class="btn btn-outline-light" id="toggle-mode">
+            <i class="fas fa-moon"></i>
+        </button>
+    </div>
+
+    <!-- Main Content - Simplified for In-Cab View -->
+    <div class="container mt-3">
+        
+        <!-- Primary Recommendation - The most important thing for operator to know -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <i class="fas fa-bullhorn me-2"></i> PRIMARY RECOMMENDATION
+            </div>
+            <div class="card-body p-4">
+                <div class="row align-items-center">
+                    <div class="col-12 text-center">
+                        <h2 class="recommendation-action" id="primary-recommendation">LOADING RECOMMENDATION...</h2>
+                        <div class="d-flex justify-content-center align-items-center mt-2">
+                            <span class="badge bg-success fs-5 me-2 p-2" id="fuel-savings-badge"><i class="fas fa-gas-pump me-1"></i> CALCULATING...</span>
+                            <span class="badge bg-info fs-5 p-2" id="engine-status-badge"><i class="fas fa-tachometer-alt me-1"></i> ANALYZING...</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Key Metrics - Large Format for Easy Reading -->
+        <div class="row mb-4">
+            <div class="col-6">
+                <div class="card">
+                    <div class="card-body text-center py-4">
+                        <i class="fas fa-tachometer-alt mb-2" style="font-size: 24px; opacity: 0.7;"></i>
+                        <div class="metric-large text-warning" id="current-speed">8.5</div>
+                        <div class="metric-label">CURRENT MPH</div>
+                        <div class="progress mt-3" style="height: 12px;">
+                            <div class="progress-bar bg-warning" role="progressbar" style="width: 85%" id="current-speed-progress"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-6">
+                <div class="card">
+                    <div class="card-body text-center py-4">
+                        <i class="fas fa-bullseye mb-2" style="font-size: 24px; opacity: 0.7;"></i>
+                        <div class="metric-large text-primary" id="optimal-speed">6.0</div>
+                        <div class="metric-label">TARGET MPH</div>
+                        <div class="progress mt-3" style="height: 12px;">
+                            <div class="progress-bar bg-success" role="progressbar" style="width: 60%" id="optimal-speed-progress"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Engine Parameters -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <i class="fas fa-tachometer-alt me-2"></i> Engine Status
+            </div>
+            <div class="card-body p-4">
+                <div class="row">
+                    <div class="col-6">
+                        <div class="mb-3">
+                            <label class="form-label fs-5">ENGINE LOAD</label>
+                            <div class="progress" style="height: 30px;">
+                                <div class="progress-bar bg-warning" id="engine-load-bar" role="progressbar" style="width: 78%">
+                                    <span id="engine-load-text" class="fw-bold">78%</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-6">
+                        <div class="mb-3">
+                            <label class="form-label fs-5">ENGINE RPM</label>
+                            <div class="high-contrast">
+                                <span class="fs-3 fw-bold" id="engine-rpm">1,850</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Field Operation Map - Simplified -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <i class="fas fa-map-marker-alt me-2"></i> Location
+            </div>
+            <div class="card-body p-0">
+                <div id="map"></div>
+            </div>
+        </div>
+
+        <!-- Quick Actions - Large Touch Targets -->
+        <div class="row mb-4">
+            <div class="col-6">
+                <button class="btn btn-primary w-100 touch-btn">
+                    <i class="fas fa-check me-2"></i> ACCEPT
+                </button>
+            </div>
+            <div class="col-6">
+                <button class="btn btn-outline-light w-100 touch-btn">
+                    <i class="fas fa-times me-2"></i> DECLINE
+                </button>
+            </div>
+        </div>
+
+        <!-- Savings Summary -->
+        <div class="card mb-3">
+            <div class="card-body p-4">
+                <div class="row align-items-center">
+                    <div class="col-7">
+                        <h4>TODAY'S SAVINGS</h4>
+                        <p class="mb-0 text-muted">Following recommendations</p>
+                    </div>
+                    <div class="col-5 text-end">
+                        <div class="text-success fs-1 fw-bold" id="daily-savings">$179.00</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Voice Control Button -->
+    <button class="voice-btn" id="voice-control">
+        <i class="fas fa-microphone"></i>
+    </button>
+
+    <!-- JavaScript Libraries -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
+    <script src="https://cdn.socket.io/4.5.0/socket.io.min.js"></script>
+
+    <!-- Custom JavaScript -->
+    <script>
+        // Initialize map with simpler controls
+        let map = L.map('map', {
+            zoomControl: false,  // Remove zoom controls for simplicity
+            attributionControl: false // Remove attribution for cleaner view
+        }).setView([41.5868, -93.6250], 16);
+        
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
+        
+        // Add field boundary
+        let fieldBoundary = [
+            [41.5900, -93.6280],
+            [41.5900, -93.6220],
+            [41.5840, -93.6220],
+            [41.5840, -93.6280]
+        ];
+        L.polygon(fieldBoundary, {color: 'green', fillOpacity: 0.2}).addTo(map);
+        
+        // Current position marker
+        let currentMarker = L.marker([41.5868, -93.6250]).addTo(map);
+        
+        // Real-time API data connection
+        let optimizationData = {};
+        let soilCarbonData = {};
+        
+        // Initialize real API data
+        async function initializeApiData() {
+            try {
+                // Update status to connecting
+                document.getElementById('api-status-text').textContent = 'CONNECTING...';
+                document.getElementById('api-status').className = 'status-indicator status-connecting';
+                
+                // Get equipment optimization data
+                const equipmentResponse = await fetch('/api/optimize', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        current_params: {
+                            speed_mph: 8.5,
+                            engine_load_pct: 78,
+                            implement_width_ft: 12,
+                            weather_factor: 1.0
+                        }
+                    })
+                });
+                
+                if (equipmentResponse.ok) {
+                    optimizationData = await equipmentResponse.json();
+                    updateEquipmentDisplay(optimizationData);
+                    
+                    // Update status to online
+                    document.getElementById('api-status-text').textContent = 'LIVE API';
+                    document.getElementById('api-status').className = 'status-indicator status-online';
+                } else {
+                    throw new Error('Equipment API failed');
+                }
+                
+                // Get soil carbon data  
+                const soilResponse = await fetch('/api/soil-carbon/predict', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        nitrogen: 45,
+                        phosphorus: 18,
+                        potassium: 165,
+                        soil_ph: 6.2,
+                        moisture_pct: 28,
+                        temperature_c: 22,
+                        organic_matter: 3.8,
+                        clay_content: 32
+                    })
+                });
+                
+                if (soilResponse.ok) {
+                    soilCarbonData = await soilResponse.json();
+                }
+                
+                // Get AI recommendations
+                const recResponse = await fetch('/api/recommendations');
+                if (recResponse.ok) {
+                    const recommendations = await recResponse.json();
+                    updateRecommendations(recommendations);
+                }
+                
+                // Calculate and display savings
+                updateSavingsDisplay();
+                
+            } catch (error) {
+                console.error('Error fetching API data:', error);
+                // Update status to demo mode
+                document.getElementById('api-status-text').textContent = 'DEMO MODE';
+                document.getElementById('api-status').className = 'status-indicator status-demo';
+                // Fallback to demo data
+                updateFallbackDisplay();
+            }
+        }
+        
+        // Update equipment display with real optimization data
+        function updateEquipmentDisplay(data) {
+            if (data && data.optimization) {
+                const current = data.optimization.current;
+                const optimized = data.optimization.optimized;
+                
+                // Update current speed
+                document.getElementById('current-speed').textContent = current.speed_mph.toFixed(1);
+                document.getElementById('current-speed-progress').style.width = (current.speed_mph / 15 * 100) + '%';
+                
+                // Update optimal speed
+                document.getElementById('optimal-speed').textContent = optimized.speed_mph.toFixed(1);
+                document.getElementById('optimal-speed-progress').style.width = (optimized.speed_mph / 15 * 100) + '%';
+                
+                // Update engine parameters
+                document.getElementById('engine-load-text').textContent = Math.round(current.engine_load_pct) + '%';
+                document.getElementById('engine-load-bar').style.width = Math.round(current.engine_load_pct) + '%';
+                
+                // Update primary recommendation
+                const speedReduction = ((current.speed_mph - optimized.speed_mph) / current.speed_mph * 100).toFixed(1);
+                document.getElementById('primary-recommendation').textContent = 
+                    `REDUCE SPEED TO ${optimized.speed_mph.toFixed(1)} MPH`;
+                    
+                // Update fuel savings badge
+                const fuelSavings = ((current.fuel_gph - optimized.fuel_gph) / current.fuel_gph * 100).toFixed(1);
+                document.getElementById('fuel-savings-badge').innerHTML = 
+                    `<i class="fas fa-gas-pump me-1"></i> SAVE ${fuelSavings}% FUEL`;
+                    
+                // Update engine status
+                document.getElementById('engine-status-badge').innerHTML = 
+                    `<i class="fas fa-tachometer-alt me-1"></i> ${optimized.engine_load_pct.toFixed(1)}% OPTIMAL LOAD`;
+            }
+        }
+        
+        // Update recommendations from API
+        function updateRecommendations(recommendations) {
+            if (recommendations && recommendations.length > 0) {
+                const topRec = recommendations[0];
+                if (topRec.title.includes('Speed')) {
+                    document.getElementById('primary-recommendation').textContent = topRec.title.toUpperCase();
+                    document.getElementById('fuel-savings-badge').innerHTML = 
+                        `<i class="fas fa-gas-pump me-1"></i> ${topRec.co2_impact.toUpperCase()}`;
+                }
+            }
+        }
+        
+        // Update savings display with real calculations
+        function updateSavingsDisplay() {
+            if (optimizationData && optimizationData.economic_impact) {
+                const dailySavings = optimizationData.economic_impact.daily_savings || 179;
+                document.getElementById('daily-savings').textContent = `$${dailySavings.toFixed(2)}`;
+            }
+        }
+        
+        // Fallback display for when APIs are not available
+        function updateFallbackDisplay() {
+            document.getElementById('primary-recommendation').textContent = 'REDUCE SPEED TO 6.0 MPH';
+            document.getElementById('fuel-savings-badge').innerHTML = 
+                '<i class="fas fa-gas-pump me-1"></i> SAVE 38.9% FUEL';
+            document.getElementById('engine-status-badge').innerHTML = 
+                '<i class="fas fa-tachometer-alt me-1"></i> OPTIMAL ENGINE LOAD';
+        }
+        
+        // Update in-cab display (legacy function for socket data)
+        function updateInCabDisplay(data) {
+            // Update metrics from socket data if available
+            if (data.speed_mph) {
+                document.getElementById('current-speed').textContent = data.speed_mph.toFixed(1);
+                document.getElementById('current-speed-progress').style.width = (data.speed_mph / 15 * 100) + '%';
+            }
+            
+            // Update engine parameters
+            if (data.engine_load_pct) {
+                document.getElementById('engine-load-text').textContent = Math.round(data.engine_load_pct) + '%';
+                document.getElementById('engine-load-bar').style.width = Math.round(data.engine_load_pct) + '%';
+            }
+            
+            if (data.engine_rpm) {
+                document.getElementById('engine-rpm').textContent = Math.round(data.engine_rpm).toLocaleString();
+            }
+            
+            // Update map position
+            if (data.latitude && data.longitude) {
+                currentMarker.setLatLng([data.latitude, data.longitude]);
+                map.panTo([data.latitude, data.longitude]);
+            }
+            
+            // Visual indicator of optimal speed vs current
+            const currentSpeed = parseFloat(document.getElementById('current-speed').textContent);
+            const optimalSpeed = parseFloat(document.getElementById('optimal-speed').textContent);
+            
+            if (Math.abs(currentSpeed - optimalSpeed) <= 0.5) {
+                // Within optimal range
+                document.getElementById('current-speed').classList.remove('text-danger', 'text-warning');
+                document.getElementById('current-speed').classList.add('text-success');
+            } else if (Math.abs(currentSpeed - optimalSpeed) <= 1.5) {
+                // Close to optimal
+                document.getElementById('current-speed').classList.remove('text-danger', 'text-success');
+                document.getElementById('current-speed').classList.add('text-warning');
+            } else {
+                // Far from optimal
+                document.getElementById('current-speed').classList.remove('text-success', 'text-warning');
+                document.getElementById('current-speed').classList.add('text-danger');
+            }
+        }
+        
+        // Day/Night mode toggle
+        document.getElementById('toggle-mode').addEventListener('click', function() {
+            const body = document.body;
+            const icon = this.querySelector('i');
+            
+            if (body.style.backgroundColor === 'white' || body.style.backgroundColor === '#ffffff') {
+                // Switch to night mode
+                body.style.backgroundColor = '#000';
+                body.style.color = '#fff';
+                icon.classList.remove('fa-sun');
+                icon.classList.add('fa-moon');
+                
+                // Update card backgrounds
+                document.querySelectorAll('.card').forEach(card => {
+                    card.style.backgroundColor = 'rgba(40, 40, 40, 0.9)';
+                    card.style.color = '#fff';
+                });
+            } else {
+                // Switch to day mode
+                body.style.backgroundColor = '#fff';
+                body.style.color = '#000';
+                icon.classList.remove('fa-moon');
+                icon.classList.add('fa-sun');
+                
+                // Update card backgrounds
+                document.querySelectorAll('.card').forEach(card => {
+                    card.style.backgroundColor = '#fff';
+                    card.style.color = '#000';
+                });
+            }
+        });
+        
+        // Voice control
+        document.getElementById('voice-control').addEventListener('click', function() {
+            // In a real implementation, this would activate voice recognition
+            alert('Voice control activated. Try saying "Show fuel usage" or "Accept recommendation"');
+        });
+        
+        // Initialize API data on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            initializeApiData();
+        });
+        
+        // Refresh API data periodically
+        setInterval(() => {
+            initializeApiData();
+        }, 30000); // Refresh every 30 seconds
+        
+        // Simulate realistic speed variations based on optimization
+        setInterval(() => {
+            const currentSpeed = parseFloat(document.getElementById('current-speed').textContent);
+            const optimalSpeed = parseFloat(document.getElementById('optimal-speed').textContent);
+            
+            // Simulate gradual approach to optimal speed
+            let targetSpeed = currentSpeed;
+            if (Math.abs(currentSpeed - optimalSpeed) > 0.1) {
+                if (currentSpeed > optimalSpeed) {
+                    targetSpeed = currentSpeed - 0.05; // Gradually reduce
+                } else {
+                    targetSpeed = currentSpeed + 0.05; // Gradually increase
+                }
+            }
+            
+            // Add small random variation
+            const variation = (Math.random() - 0.5) * 0.1;
+            targetSpeed += variation;
+            
+            // Update display
+            document.getElementById('current-speed').textContent = targetSpeed.toFixed(1);
+            document.getElementById('current-speed-progress').style.width = (targetSpeed / 15 * 100) + '%';
+            
+            // Update engine load based on speed (realistic simulation)
+            const engineLoad = Math.min(95, Math.max(40, 45 + (targetSpeed - 6) * 8));
+            document.getElementById('engine-load-text').textContent = Math.round(engineLoad) + '%';
+            document.getElementById('engine-load-bar').style.width = Math.round(engineLoad) + '%';
+            
+            // Update RPM based on load
+            const rpm = Math.round(1200 + engineLoad * 12);
+            document.getElementById('engine-rpm').textContent = rpm.toLocaleString();
+            
+            // Trigger the display update logic
+            updateInCabDisplay({
+                speed_mph: targetSpeed,
+                engine_load_pct: engineLoad,
+                engine_rpm: rpm
+            });
+        }, 2000); // Update every 2 seconds
+    </script>
+</body>
+</html>

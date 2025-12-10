@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="32" height="32" viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg">
+  <!-- Background circle -->
+  <circle cx="16" cy="16" r="14" fill="#2d5a27" stroke="#367c2b" stroke-width="1"/>
+  
+  <!-- Leaf icon -->
+  <path d="M10 18 Q13 8 20 11 Q16 22 10 18 Z" fill="#4CAF50"/>
+  <path d="M12 15 L20 18" stroke="#2d5a27" stroke-width="1" stroke-linecap="round"/>
+  
+  <!-- AI Circuit dots -->
+  <circle cx="11" cy="13" r="1" fill="#81C784" opacity="0.8"/>
+  <circle cx="21" cy="17" r="1" fill="#81C784" opacity="0.8"/>
+  <path d="M11 13 L15 15 L21 17" stroke="#81C784" stroke-width="0.5" opacity="0.6"/>
+</svg>

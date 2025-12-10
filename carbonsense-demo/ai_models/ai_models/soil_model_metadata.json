@@ -1,0 +1,31 @@
+{
+  "feature_names": [
+    "nitrogen_ppm",
+    "phosphorus_ppm",
+    "potassium_ppm",
+    "soil_ph",
+    "organic_carbon_pct",
+    "moisture_pct",
+    "temperature_c",
+    "bulk_density",
+    "clay_pct",
+    "sand_pct",
+    "crop_type_encoded",
+    "tillage_intensity",
+    "fertilizer_rate_kg_ha",
+    "days_since_fertilization",
+    "precipitation_mm"
+  ],
+  "crop_types": {
+    "corn": 0,
+    "soybean": 1,
+    "wheat": 2,
+    "cotton": 3,
+    "rice": 4,
+    "barley": 5,
+    "oats": 6,
+    "alfalfa": 7
+  },
+  "model_version": "1.0",
+  "training_date": "2025-09-10T10:23:01.874982"
+}

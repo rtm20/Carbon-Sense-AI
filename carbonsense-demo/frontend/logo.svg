@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="240" height="60" viewBox="0 0 240 60" xmlns="http://www.w3.org/2000/svg">
+  <!-- Background circle for the icon -->
+  <circle cx="30" cy="30" r="25" fill="#2d5a27" stroke="#367c2b" stroke-width="2"/>
+  
+  <!-- Leaf icon -->
+  <path d="M20 35 Q25 20 35 25 Q30 40 20 35 Z" fill="#4CAF50"/>
+  <path d="M25 30 L35 35" stroke="#2d5a27" stroke-width="1.5" stroke-linecap="round"/>
+  
+  <!-- AI Circuit pattern overlay -->
+  <circle cx="22" cy="25" r="1.5" fill="#81C784" opacity="0.8"/>
+  <circle cx="38" cy="32" r="1.5" fill="#81C784" opacity="0.8"/>
+  <path d="M22 25 L28 28 L38 32" stroke="#81C784" stroke-width="1" opacity="0.6"/>
+  
+  <!-- Text: CarbonSense -->
+  <text x="70" y="25" font-family="Arial, sans-serif" font-size="18" font-weight="bold" fill="#2d5a27">
+    Carbon<tspan fill="#367c2b">Sense</tspan>
+  </text>
+  
+  <!-- Text: AI -->
+  <text x="70" y="45" font-family="Arial, sans-serif" font-size="14" font-weight="600" fill="#666" letter-spacing="2px">
+    AI
+  </text>
+  
+  <!-- Subtle tech accent -->
+  <rect x="105" y="42" width="8" height="2" fill="#4CAF50" opacity="0.7"/>
+  <rect x="115" y="42" width="4" height="2" fill="#81C784" opacity="0.7"/>
+</svg>
