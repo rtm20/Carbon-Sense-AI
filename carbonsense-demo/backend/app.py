@@ -252,6 +252,7 @@ class CarbonSenseAPI:
         self.diesel_cost = 3.85
         self.demo_mode = True
         self.models_loaded = False
+        self.demo_data = None  # Initialize demo_data attribute
         self.model_diagnostics = {
             "data_quality": {},
             "model_performance": {},
@@ -277,6 +278,9 @@ class CarbonSenseAPI:
             print("⚠️ Using built-in fallback CarbonOptimizer implementation")
             self.optimizer = CarbonOptimizer()
             self.using_real_optimizer = False
+        
+        # Load demo data on initialization
+        self.load_demo_data()
         
     def load_demo_data(self):
         """Load demo telemetry data"""
