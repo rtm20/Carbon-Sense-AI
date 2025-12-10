@@ -1,3 +1,0 @@
-"""
-CarbonSense AI Models Package
-"""
